@@ -18,7 +18,7 @@
 #define variables
 GET=$(which egrep)
 AWK=$(which awk)
-KUBE_DIR="$HOME/.kube/plugins"
+KUBE_DIR="/usr/local/bin"
 SCRIPT=${0##*/}
 # define functions
 info()
@@ -44,7 +44,7 @@ usage() {
     $SCRIPT qmux
     $SCRIPT qmux qcheck
 
-  Note: Default plugin directory = $HOME/.kube/plugins
+  Note: Default plugin directory = /usr/local/bin
 
 EOF
 }

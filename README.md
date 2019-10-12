@@ -2,7 +2,7 @@
 a repository for plugins for kubernetes
 
 # Pre-requisites
-* kubectl >= 1.9.x
+* kubectl >= 1.12.x
 * tmux >= 2.1
 (Tmux is a terminal multiplexer that helps in creating multiple terminals.)
 
@@ -19,11 +19,12 @@ $ ./install-kube-plugins.sh qcheck qmux
 ```
 
 ## USAGE
-* Copy the directory of the plugin in to ~/.kube/plugins/.
+* Plugin name convention is kubectl-<plugin name>-<argument>
+* Copy the plugin script to /usr/local/bin/
 * Run below command to see available plugins
 ```
 $ kubectl plugin -h
 ```
 
 ## Execute
-kubectl plugins <plugin-name> <arguments>
+kubectl <plugin-name> <arguments>

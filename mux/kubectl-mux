@@ -1,7 +1,7 @@
 #!/bin/bash
 # AUTHOR: Abhishek Tamrakar
 # EMAIL: abhishek.tamrakar08@gmail.com
-# VERSION: 0.0.1
+# VERSION: 1.1.0
 # LICENSE: Copyright (C) 2018 Abhishek Tamrakar
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,13 +17,28 @@
 #   limitations under the License.
 ##
 #define variables
-KUBE=${KUBECTL_PLUGINS_CALLER}
+KUBE=$(which kubectl)
 GET=$(which egrep)
 AWK=$(which awk)
 TMUX=$(which tmux)
 SCRIPT=${0##*/}
 NEWSESSION="${SCRIPT%%.*}$RANDOM"
 # define functions
+usage()
+{
+  cat << _EOF_
+    $SCRIPT <options>
+
+    options:
+        -n|--namespace:  Kubernetes NAMESPACE or `export NAMESPACE=<value>` 
+        -s|--session:    Session Name for TMUX
+        -e|--show-error: Show only errored pods
+        -h|--help:       Print this help and quit
+_EOF_
+
+exit 1
+}
+
 info()
 {
   printf '\n%s: %s\n' "INFO" "$@"
@@ -42,7 +57,7 @@ fatal()
 
 check_commands()
 {
-  CMDS=(GET AWK TMUX KUBE)
+  CMDS=(TMUX KUBE)
   for cmd in ${CMDS[@]}
   do
      if [ x${!cmd} = x ]; then
@@ -96,9 +111,9 @@ start_split()
 run_kube_command()
 {
   # only for use with plugin.
-  NAMESPACE=${KUBECTL_PLUGINS_LOCAL_FLAG_NAMESPACE:-$KUBECTL_PLUGINS_CURRENT_NAMESPACE}
-  THIS_SESSION=${KUBECTL_PLUGINS_LOCAL_FLAG_SESSION:-$NEWSESSION}
-  SHOWERROR="${KUBECTL_PLUGINS_LOCAL_FLAG_ERROR}"
+  local THIS_NAMESPACE=${1}
+  local THIS_SESSION=${2}
+  local SHOWERROR="${3}"
   n=0
   while IFS=' ' read -r POD CONTAINERS
   do
@@ -138,6 +153,35 @@ attach_sessions()
 trap destroy 2 3 15 EXIT
 #
 # run
+while [ $# -gt 0 ]; do
+  case $1 in
+  -n|--namespace) shift; NAMESPACE=$1;;
+  -s|--session) shift; SESSION_NAME=$1;;
+  -e|--show-error) SHOWERROR=1;;
+  -h|--help) usage;;
+  *) fatal "invalid option $1";;
+  esac
+  shift;
+done
+
+# check cli availability
 check_commands
-run_kube_command
+
+# check k8s version compatibility
+COMPATIBLE_KUBE_VERSION=$($KUBE version --client --short| \
+  awk -F': ' '{ \
+    gsub("v","",$2); \
+    split($2,a,"."); \
+    if (a[1] == 1 && a[2] < 12) print "no"; else print "yes" \
+  }' \
+)
+
+if [[ "$COMPATIBLE_KUBE_VERSION" = "no" ]]; then
+  fatal "kubectl version is incompatible, please correct and try again."
+fi
+
+# run kubectl cli to get details
+run_kube_command $NAMESPACE $SESSION_NAME $SHOWERROR
+
+# at last attach the parent session
 attach_sessions
