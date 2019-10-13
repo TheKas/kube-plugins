@@ -17,7 +17,7 @@
 #   limitations under the License.
 ##
 #define variables
-KUBE=$(which kubectl)
+KUBECTL=$(which kubectl)
 GET=$(which egrep)
 AWK=$(which awk)
 TMUX=$(which tmux)
@@ -26,11 +26,11 @@ NEWSESSION="${SCRIPT%%.*}$RANDOM"
 # define functions
 usage()
 {
-  cat << _EOF_
+  cat <<_EOF_
     $SCRIPT <options>
 
     options:
-        -n|--namespace:  Kubernetes NAMESPACE or `export NAMESPACE=<value>` 
+        -n|--namespace:  KUBECTLrnetes NAMESPACE or export NAMESPACE=<value>
         -s|--session:    Session Name for TMUX
         -e|--show-error: Show only errored pods
         -h|--help:       Print this help and quit
@@ -57,11 +57,11 @@ fatal()
 
 check_commands()
 {
-  CMDS=(TMUX KUBE)
-  for cmd in ${CMDS[@]}
+  CMDS=(TMUX KUBECTL)
+  for CMD in ${CMDS[@]}
   do
-     if [ x${!cmd} = x ]; then
-       fatal "${!cmd} not found"
+     if [ x${!CMD} = x ]; then
+       fatal "${CMD,,} not found"
      fi
   done
 }
@@ -82,9 +82,9 @@ check_session()
 {
   if $TMUX has-session -t $THIS_SESSION 2>/dev/null;
   then
-    is_session=0
+    IS_SESSION=0
   else
-    is_session=1
+    IS_SESSION=1
   fi
 }
 
@@ -98,7 +98,7 @@ create_session()
 start_split()
 {
   check_session
-  if [ $is_session -eq 1 ]; then
+  if [ $IS_SESSION -eq 1 ]; then
     # create session
     start_server
     create_session
@@ -108,7 +108,7 @@ start_split()
     select-layout tiled \;
 }
 
-run_kube_command()
+run_KUBECTL_command()
 {
   # only for use with plugin.
   local THIS_NAMESPACE=${1}
@@ -125,19 +125,19 @@ run_kube_command()
         warn "Looks like there is a problem getting pods data."
         break
       fi
-      if [ ${SHOWERROR} -eq 1 ]; then
+      if [ ${SHOWERROR:-0} -eq 1 ]; then
         # if enabled
-        COMMAND="$KUBE logs -f $POD -c $CONTAINER -n $NAMESPACE | $GET '[Ee]rror|ERROR|[Ww]arn|WARN|[Ee]xception'"
+        COMMAND="$KUBECTL logs -f $POD -c $CONTAINER -n $NAMESPACE | $GET '[Ee]rror|[E]RROR|[Ww]arn|[W]ARN|[Ee]xception'"
       else
         #normal run
-        COMMAND="$KUBE logs -f $POD -c $CONTAINER -n $NAMESPACE"
+        COMMAND="$KUBECTL logs -f $POD -c $CONTAINER -n $NAMESPACE"
       fi
 
       start_split
     done
     $TMUX renamew $POD 2>/dev/null
     ((n+=1))
-  done< <($KUBE get pods -n $NAMESPACE \
+  done< <($KUBECTL get pods -n $NAMESPACE \
 	--ignore-not-found=true \
 	-o=custom-columns=NAME:.metadata.name,CONTAINERS:.spec.containers[*].name| \
 	sed '1d')
@@ -168,7 +168,7 @@ done
 check_commands
 
 # check k8s version compatibility
-COMPATIBLE_KUBE_VERSION=$($KUBE version --client --short| \
+COMPATIBLE_KUBECTL_VERSION=$($KUBECTL version --client --short| \
   awk -F': ' '{ \
     gsub("v","",$2); \
     split($2,a,"."); \
@@ -176,12 +176,12 @@ COMPATIBLE_KUBE_VERSION=$($KUBE version --client --short| \
   }' \
 )
 
-if [[ "$COMPATIBLE_KUBE_VERSION" = "no" ]]; then
+if [[ "$COMPATIBLE_KUBECTL_VERSION" = "no" ]]; then
   fatal "kubectl version is incompatible, please correct and try again."
 fi
 
 # run kubectl cli to get details
-run_kube_command $NAMESPACE $SESSION_NAME $SHOWERROR
+run_KUBECTL_command $NAMESPACE $SESSION_NAME $SHOWERROR
 
 # at last attach the parent session
 attach_sessions
