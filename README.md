@@ -13,14 +13,42 @@ a repository for plugins and scripts for kubernetes
 ## USAGE
 * TO use as K8S Plugin, name convention is kubectl-plugin name-argument. Follow https://kubernetes.io/docs/tasks/extend-kubectl/kubectl-plugins/ for more detail.
 * Copy the plugin script to /usr/local/bin/
+* Follow naming convention as per the kubectl-plugins document mentioned above.
 * Run below command to see available plugins
 ```
-$ kubectl plugin -h
+$ kubectl plugin list
+The following compatible plugins are available:
+
+/usr/local/bin/kubectl-krawl
+/usr/local/bin/kubectl-mux
+
 ```
 
 * Execute
 ```
-kubectl <plugin-name> <arguments>
+$ kubectl krawl
+
+---------------------------------------------------------------------------------
+  Krawl is a command line utility to scan pods and prints name of errored pods
++and containers within. To use it as kubernetes plugin, please check their page
+=================================================================================
+NAMESPACE    |POD_NAME                     |CONTAINER_NAME      |ERRORS
+---------    |--------                     |--------------      |------
+kube-system  |kube-addon-manager-minikube  |kube-addon-manager  |3
+
 ```
 
 * To use as utility script, use as is.
+
+```
+$ krawl
+
+---------------------------------------------------------------------------------
+  Krawl is a command line utility to scan pods and prints name of errored pods
++and containers within. To use it as kubernetes plugin, please check their page
+=================================================================================
+NAMESPACE    |POD_NAME                     |CONTAINER_NAME      |ERRORS
+---------    |--------                     |--------------      |------
+kube-system  |kube-addon-manager-minikube  |kube-addon-manager  |3
+
+```

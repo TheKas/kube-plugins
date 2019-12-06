@@ -18,59 +18,50 @@
 #define the variables
 KUBE_LOC=~/.kube/config
 #define variables
-KUBE=$(which kubectl)
+KUBECTL=$(which kubectl)
 GET=$(which egrep)
 AWK=$(which awk)
 red=$(tput setaf 1)
 normal=$(tput sgr0)
 # define functions
+
+# wrapper for printing info messages
 info()
 {
   printf '\n\e[34m%s\e[m: %s\n' "INFO" "$@"
 }
 
-fatal()
+# cleanup when all done
+cleanup()
 {
-  printf '\n\e[31m%s\e[m: %s\n' "ERROR" "$@"
-  exit 1
+  rm -f results.csv
 }
 
+# just check if the command we are about to call is available
 checkcmd()
 {
   #check if command exists
   local cmd=$1
   if [ -z "${!cmd}" ]
   then
-    fatal "check if kubectl is installed !!!"
+    printf '\n\e[31m%s\e[m: %s\n' "ERROR"  "check if $1 is installed !!!"
+    exit 1
   fi
-}
-
-print_table()
-{
-  #prepare the ground
-  first=$(echo -n "$@"|cut -d'|' -f1)
-  second=$(echo -n "$@"|cut -d'|' -f2)
-  third=$(echo -n "$@"|cut -d'|' -f3)
-  sizeoffirst=$((${#first} + 5))
-  sizeofsecond=${#second}
-  printf "\n\e[1m%s\e[0m\t\e[32m%s\e[0m" "POD_NAME      " "${first}"
-  printf "\n\e[1m%s\e[0m\t\e[32m%s\e[0m" "CONTAINER_NAME" "${second}"
-  printf "\n\e[1m%s\e[0m\t\e[32m%s\e[0m" "ERRORED       " "${third}"
-  printf '\n'
 }
 
 get_namespaces()
 {
   #get namespaces
   namespaces=( \
-          $($KUBE get namespaces --ignore-not-found=true | \
+          $($KUBECTL get namespaces --ignore-not-found=true | \
           $AWK '/Active/ {print $1}' \
           ORS=" ") \
           )
 #exit if namespaces are not found
 if [ ${#namespaces[@]} -eq 0 ]
 then
-  fatal "No namespaces found!!"
+  printf '\n\e[31m%s\e[m: %s\n' "ERROR"  "No namespaces found!!"
+  exit 1
 fi
 }
 
@@ -84,7 +75,7 @@ get_pod_events()
       do
         info "POD: $CULPRIT"
         info
-        $KUBE get events \
+        $KUBECTL get events \
         --field-selector=involvedObject.name=$CULPRIT \
         -ocustom-columns=LASTSEEN:.lastTimestamp,REASON:.reason,MESSAGE:.message \
         --all-namespaces \
@@ -96,34 +87,31 @@ get_pod_events()
 #define the logic
 get_pod_errors()
 {
+  printf "%s %s %s\n" "NAMESPACE,POD_NAME,CONTAINER_NAME,ERRORS" > results.csv
+  printf "%s %s %s\n" "---------,--------,--------------,------" >> results.csv
   for NAMESPACE in ${namespaces[@]}
   do
-    info "Scanning pod logs, Namespace: ${red}$NAMESPACE${normal}"
-    printf '\n'
     while IFS=' ' read -r POD CONTAINERS
     do
       for CONTAINER in ${CONTAINERS//,/ }
       do
-        COUNT=$($KUBE logs --since=1h --tail=20 $POD -c $CONTAINER -n $NAMESPACE 2>/dev/null| \
+        COUNT=$($KUBECTL logs --since=1h --tail=20 $POD -c $CONTAINER -n $NAMESPACE 2>/dev/null| \
         $GET -c '^error|Error|ERROR|Warn|WARN')
         if [ $COUNT -gt 0 ]
         then
-            STATE=("${STATE[@]}" "$POD|$CONTAINER|$COUNT")
+            STATE=("${STATE[@]}" "$NAMESPACE,$POD,$CONTAINER,$COUNT")
         else
         #catch pods in errored state
-            ERRORED=($($KUBE get pods -n $NAMESPACE | \
+            ERRORED=($($KUBECTL get pods -n $NAMESPACE | \
                 sed '1d' |\
                 awk '!/Running/ {print $1}' ORS=" ") \
                 )
         fi
       done
-    done< <($KUBE get pods -n $NAMESPACE --ignore-not-found=true -o=custom-columns=NAME:.metadata.name,CONTAINERS:.spec.containers[*].name|sed '1d')
-    print_table ${STATE[@]:-None}
-      #sed -e '/^$/d;s/^/|/g;s/$/|/g'|  \
-    get_pod_events
-    STATE=()
-    ERRORED=()
+    done< <($KUBECTL get pods -n $NAMESPACE --ignore-not-found=true -o=custom-columns=NAME:.metadata.name,CONTAINERS:.spec.containers[*].name|sed '1d')
   done
+  printf "%s\n" ${STATE[@]:-None} >> results.csv
+  STATE=()
 }
 #define usage for seprate run
 usage()
@@ -140,7 +128,8 @@ exit 0
 }
 
 #check if basic commands are found
-checkcmd KUBE
+trap cleanup EXIT
+checkcmd KUBECTL
 #
 #set the ground
 if [ $# -lt 1 ]; then
@@ -159,3 +148,12 @@ fi
 #play
 get_namespaces
 get_pod_errors
+
+printf '\n'
+printf '%s\n' '---------------------------------------------------------------------------------'
+printf '%s\n' '  Krawl is a command line utility to scan pods and prints name of errored pods   '
+printf '%s\n' ' +and containers within. To use it as kubernetes plugin, please check their page '
+printf '%s\n' '================================================================================='
+
+cat results.csv | sed 's/,/,|/g'| column -s ',' -t
+get_pod_events
