@@ -145,6 +145,7 @@ run_KUBECTL_command()
 
 attach_sessions()
 {
+  local THIS_SESSION=$1
   $TMUX selectw -t $THIS_SESSION:1 \; \
   attach-session -t $THIS_SESSION\;
 }
@@ -157,7 +158,7 @@ while [ $# -gt 0 ]; do
   case $1 in
   -n|--namespace) shift; NAMESPACE=$1;;
   -s|--session) shift; SESSION_NAME=$1;;
-  -e|--show-error) SHOWERROR=1;;
+  -e|--show-error) SHOWERROR=0;;
   -h|--help) usage;;
   *) fatal "invalid option $1";;
   esac
@@ -181,7 +182,10 @@ if [[ "$COMPATIBLE_KUBECTL_VERSION" = "no" ]]; then
 fi
 
 # run kubectl cli to get details
+if [ -z $SESSION_NAME ]; then
+  SESSION_NAME=$NEWSESSION
+fi
 run_KUBECTL_command $NAMESPACE $SESSION_NAME $SHOWERROR
 
 # at last attach the parent session
-attach_sessions
+attach_sessions $SESSION_NAME
