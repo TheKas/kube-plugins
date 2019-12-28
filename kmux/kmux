@@ -30,7 +30,7 @@ usage()
     $SCRIPT <options>
 
     options:
-        -n|--namespace:  KUBECTLrnetes NAMESPACE or export NAMESPACE=<value>
+        -n|--namespace:  kubernetes NAMESPACE or export NAMESPACE=<value>
         -s|--session:    Session Name for TMUX
         -e|--show-error: Show only errored pods
         -h|--help:       Print this help and quit
