@@ -105,13 +105,12 @@ get_pod_errors()
             STATE=("${STATE[@]}" "$NAMESPACE,$POD,$CONTAINER,$COUNT")
         else
         #catch pods in errored state
-            ERRORED=($($KUBECTL get pods -n $NAMESPACE | \
-                sed '1d' |\
+            ERRORED=($($KUBECTL get pods -n $NAMESPACE --no-headers=true | \
                 awk '!/Running/ {print $1}' ORS=" ") \
                 )
         fi
       done
-    done< <($KUBECTL get pods -n $NAMESPACE --ignore-not-found=true -o=custom-columns=NAME:.metadata.name,CONTAINERS:.spec.containers[*].name|sed '1d')
+    done< <($KUBECTL get pods -n $NAMESPACE --ignore-not-found=true -o=custom-columns=NAME:.metadata.name,CONTAINERS:.spec.containers[*].name --no-headers=true)
   done
   printf "%s\n" ${STATE[@]:-None} >> results.csv
   STATE=()
