@@ -1,7 +1,7 @@
 #!/bin/bash
 # AUTHOR: Abhishek Tamrakar
 # EMAIL: abhishek.tamrakar08@gmail.com
-# VERSION: 1.1.0
+# VERSION: 1.3.1
 # LICENSE: Copyright (C) 2018 Abhishek Tamrakar
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -68,8 +68,8 @@ check_commands()
 
 destroy()
 {
-  $TMUX kill-server 2>/dev/null \
-    && info "All sessions killed"
+  $TMUX kill-session $THIS_SESSION 2>/dev/null \
+    && info "Session $THIS_SESSION killed"
 }
 
 start_server()
