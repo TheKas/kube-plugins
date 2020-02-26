@@ -16,11 +16,27 @@ a repository for plugins and scripts for kubernetes
 * Follow naming convention as per the kubectl-plugins document mentioned above.
 * Run below command to see available plugins
 ```
+# run command and if kmux is not listed as plugins, follow below.
+
 $ kubectl plugin list
+
+# install plugin as recommended.
+
+cd kube-plugins
+
+cp -p kmux/kmux /usr/local/bin/kubectl-kmux
+
+cp -p krawl/krawl /usr/local/bin/kubectl-krawl
+
+# run list command again to see if your plugin is listed.
+
+$ kubectl plugin list
+
 The following compatible plugins are available:
 
 /usr/local/bin/kubectl-krawl
-/usr/local/bin/kubectl-mux
+
+/usr/local/bin/kubectl-kmux
 
 ```
 
